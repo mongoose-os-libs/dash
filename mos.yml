@@ -1,0 +1,21 @@
+author: mongoose-os
+type: lib
+description: Support library for the device management dashboard
+version: 1.0
+
+sources:
+  - src
+
+config_schema:
+  - ["dash", "o", {"title": "Device management dashboard settings"}]
+  - ["dash.enable", "b", false, {"title": "Enable"}]
+  - ["dash.topic", "s", "", {"title": "Heartbeat topic that receives Sys.GetInfo reports. If empty, defaults to /DEVICE_ID/dash"}]
+  - ["dash.interval", "i", 5, {"title": "Heartbeat interval in secods. Set to 0 to disable"}]
+
+libs:
+  - origin: https://github.com/mongoose-os-libs/mqtt
+
+tags:
+  - c
+
+manifest_version: 2017-05-18
