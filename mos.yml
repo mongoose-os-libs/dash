@@ -9,11 +9,12 @@ sources:
 config_schema:
   - ["dash", "o", {"title": "Device management dashboard settings"}]
   - ["dash.enable", "b", false, {"title": "Enable"}]
-  - ["dash.topic", "s", "", {"title": "Heartbeat topic that receives Sys.GetInfo reports. If empty, defaults to /DEVICE_ID/dash"}]
-  - ["dash.interval", "i", 5, {"title": "Heartbeat interval in secods. Set to 0 to disable"}]
+  - ["dash.server", "s", "ws://mongoose-os.com/dashboard/dash", {"title": "Server"}]
+  - ["dash.ca_file", "s", "ca.pem", {"title": "CA file"}]
+  - ["dash.interval", "i", 10, {"title": "Heartbeat interval in secods. Set to 0 to disable"}]
 
 libs:
-  - origin: https://github.com/mongoose-os-libs/mqtt
+  - origin: https://github.com/mongoose-os-libs/rpc-common
 
 tags:
   - c
