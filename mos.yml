@@ -9,9 +9,11 @@ sources:
 config_schema:
   - ["dash", "o", {"title": "Device management dashboard settings"}]
   - ["dash.enable", "b", false, {"title": "Enable"}]
-  - ["dash.server", "s", "ws://mongoose-os.com/dashboard/dash", {"title": "Server"}]
+  - ["dash.token", "s", "", {"title": "Access token"}]
+  - ["dash.server", "s", "wss://mongoose-os.com/dashboard/rpc", {"title": "Server"}]
   - ["dash.ca_file", "s", "ca.pem", {"title": "CA file"}]
-  - ["dash.interval", "i", 10, {"title": "Heartbeat interval in secods. Set to 0 to disable"}]
+  - ["dash.heartbeat_interval", "i", 10, {"title": "Heartbeat interval in secods. Set to 0 to disable"}]
+  - ["dash.send_logs", "b", true, {"title": "Send logs"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/rpc-common

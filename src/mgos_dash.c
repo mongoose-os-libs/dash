@@ -6,7 +6,8 @@
 
 static void timer_cb(void *arg) {
   const struct sys_config_dash *cfg = &get_cfg()->dash;
-  struct mg_rpc_call_opts opts = {.dst = mg_mk_str(cfg->server)};
+  struct mg_rpc_call_opts opts = {.dst = mg_mk_str(cfg->server),
+                                  .key = mg_mk_str(cfg->token)};
   mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Heartbeat"), NULL, NULL,
                &opts, "%M", (json_printf_callback_t) mgos_print_sys_info);
   (void) arg;
@@ -16,12 +17,12 @@ static void s_debug_write_hook(enum mgos_hook_type type,
                                const struct mgos_hook_arg *arg,
                                void *userdata) {
   const struct sys_config_dash *cfg = &get_cfg()->dash;
-  struct mg_rpc_call_opts opts = {.dst = mg_mk_str(cfg->server)};
+  struct mg_rpc_call_opts opts = {.dst = mg_mk_str(cfg->server),
+                                  .key = mg_mk_str(cfg->token)};
   static unsigned s_seq = 0;
   mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Log"), NULL, NULL, &opts,
-               "{fd:%d, data: %.*Q, t: %.3lf id:%Q, seq:%u}", arg->debug.fd,
-               (int) arg->debug.len, arg->debug.data, mg_time(),
-               get_cfg()->device.id, s_seq);
+               "{fd:%d, data: %.*Q, t: %.3lf, seq:%u}", arg->debug.fd,
+               (int) arg->debug.len, arg->debug.data, mg_time(), s_seq);
   s_seq++;
   (void) type;
   (void) userdata;
@@ -47,11 +48,14 @@ bool mgos_dash_init(void) {
     return false;
   }
   mg_rpc_add_channel(mgos_rpc_get_global(), chcfg.server_address, ch, true);
-  mgos_hook_register(MGOS_HOOK_DEBUG_WRITE, s_debug_write_hook, NULL);
 
-  if (cfg->interval > 0) {
-    mgos_set_timer(cfg->interval * 1000, 1, timer_cb, NULL);
-    LOG(LL_INFO, ("Starting %d sec heartbeat timer", cfg->interval));
+  if (cfg->send_logs) {
+    mgos_hook_register(MGOS_HOOK_DEBUG_WRITE, s_debug_write_hook, NULL);
+  }
+
+  if (cfg->heartbeat_interval > 0) {
+    mgos_set_timer(cfg->heartbeat_interval * 1000, 1, timer_cb, NULL);
+    LOG(LL_INFO, ("Starting %d sec heartbeat timer", cfg->heartbeat_interval));
   }
   return true;
 }
