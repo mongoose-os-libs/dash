@@ -7,7 +7,8 @@
 static void timer_cb(void *arg) {
   const struct sys_config_dash *cfg = &get_cfg()->dash;
   struct mg_rpc_call_opts opts = {.dst = mg_mk_str(cfg->server),
-                                  .key = mg_mk_str(cfg->token)};
+                                  .key = mg_mk_str(cfg->token),
+                                  .noqueue = true};
   mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Heartbeat"), NULL, NULL,
                &opts, "%M", (json_printf_callback_t) mgos_print_sys_info);
   (void) arg;
@@ -18,7 +19,8 @@ static void s_debug_write_hook(enum mgos_hook_type type,
                                void *userdata) {
   const struct sys_config_dash *cfg = &get_cfg()->dash;
   struct mg_rpc_call_opts opts = {.dst = mg_mk_str(cfg->server),
-                                  .key = mg_mk_str(cfg->token)};
+                                  .key = mg_mk_str(cfg->token),
+                                  .noqueue = true};
   static unsigned s_seq = 0;
   mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Log"), NULL, NULL, &opts,
                "{fd:%d, data: %.*Q, t: %.3lf, seq:%u}", arg->debug.fd,
@@ -32,16 +34,23 @@ bool mgos_dash_init(void) {
   const struct sys_config_dash *cfg = &get_cfg()->dash;
 
   if (!cfg->enable) return true;
+  if (cfg->server == NULL) {
+    LOG(LL_ERROR, ("dash.enable=true but dash.server is not set"));
+    return false;
+  }
 
   struct mg_rpc_channel_ws_out_cfg chcfg = {
-    .server_address = mg_mk_str(cfg->server),
-#if MG_ENABLE_SSL
-    .ssl_ca_file = mg_mk_str(cfg->ca_file),
-#endif
-    .reconnect_interval_min = 5,
-    .reconnect_interval_max = 60,
-    .idle_close_timeout = 0,
+      .server_address = mg_mk_str(cfg->server),
+      .reconnect_interval_min = 5,
+      .reconnect_interval_max = 60,
+      .idle_close_timeout = 0,
   };
+#if MG_ENABLE_SSL
+  if (strncmp(cfg->server, "wss://", 6) == 0) {
+    chcfg.ssl_ca_file = mg_mk_str(cfg->ca_file);
+  }
+#endif
+
   struct mg_rpc_channel *ch = mg_rpc_channel_ws_out(mgos_get_mgr(), &chcfg);
   if (ch == NULL) {
     LOG(LL_ERROR, ("Cannot create dashboard connection"));
