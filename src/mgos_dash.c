@@ -4,27 +4,43 @@
 #include "mgos_mqtt.h"
 #include "mgos_rpc.h"
 
-static void timer_cb(void *arg) {
+static void mgos_dash_vcallf(const char *service, const char *json_fmt,
+                             va_list ap) {
   const struct sys_config_dash *cfg = &get_cfg()->dash;
   struct mg_rpc_call_opts opts = {.dst = mg_mk_str(cfg->server),
                                   .key = mg_mk_str(cfg->token),
                                   .noqueue = true};
-  mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Heartbeat"), NULL, NULL,
-               &opts, "%M", (json_printf_callback_t) mgos_print_sys_info);
+  mg_rpc_vcallf(mgos_rpc_get_global(), mg_mk_str(service), NULL, NULL, &opts,
+                json_fmt, ap);
+}
+
+static void mgos_dash_callf(const char *service, const char *json_fmt, ...) {
+  va_list ap;
+  va_start(ap, json_fmt);
+  mgos_dash_vcallf(service, json_fmt, ap);
+  va_end(ap);
+}
+
+void mgos_dash_send_data(const char *json_fmt, ...) {
+  va_list ap;
+  va_start(ap, json_fmt);
+  mgos_dash_vcallf("Dash.Data", json_fmt, ap);
+  va_end(ap);
+}
+
+static void timer_cb(void *arg) {
+  mgos_dash_callf("Dash.Heartbeat", "%M",
+                  (json_printf_callback_t) mgos_print_sys_info);
   (void) arg;
 }
 
 static void s_debug_write_hook(enum mgos_hook_type type,
                                const struct mgos_hook_arg *arg,
                                void *userdata) {
-  const struct sys_config_dash *cfg = &get_cfg()->dash;
-  struct mg_rpc_call_opts opts = {.dst = mg_mk_str(cfg->server),
-                                  .key = mg_mk_str(cfg->token),
-                                  .noqueue = true};
   static unsigned s_seq = 0;
-  mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Log"), NULL, NULL, &opts,
-               "{fd:%d, data: %.*Q, t: %.3lf, seq:%u}", arg->debug.fd,
-               (int) arg->debug.len, arg->debug.data, mg_time(), s_seq);
+  mgos_dash_callf("Dash.Log", "{fd:%d, data: %.*Q, t: %.3lf, seq:%u}",
+                  arg->debug.fd, (int) arg->debug.len, arg->debug.data,
+                  mg_time(), s_seq);
   s_seq++;
   (void) type;
   (void) userdata;
