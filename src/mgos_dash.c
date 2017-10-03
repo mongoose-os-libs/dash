@@ -1,7 +1,6 @@
 #include <stdbool.h>
 
 #include "mgos.h"
-#include "mgos_mqtt.h"
 #include "mgos_rpc.h"
 
 static void mgos_dash_vcallf(const char *service, const char *json_fmt,
