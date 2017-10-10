@@ -5,10 +5,10 @@
 
 static void mgos_dash_vcallf(const char *service, const char *json_fmt,
                              va_list ap) {
-  const struct sys_config_dash *cfg = &get_cfg()->dash;
-  struct mg_rpc_call_opts opts = {.dst = mg_mk_str(cfg->server),
-                                  .key = mg_mk_str(cfg->token),
-                                  .noqueue = true};
+  struct mg_rpc_call_opts opts = {
+      .dst = mg_mk_str(mgos_sys_config_get_dash_server()),
+      .key = mg_mk_str(mgos_sys_config_get_dash_token()),
+      .noqueue = true};
   mg_rpc_vcallf(mgos_rpc_get_global(), mg_mk_str(service), NULL, NULL, &opts,
                 json_fmt, ap);
 }
@@ -46,23 +46,21 @@ static void s_debug_write_hook(enum mgos_hook_type type,
 }
 
 bool mgos_dash_init(void) {
-  const struct sys_config_dash *cfg = &get_cfg()->dash;
-
-  if (!cfg->enable) return true;
-  if (cfg->server == NULL) {
+  if (!mgos_sys_config_get_dash_enable()) return true;
+  if (mgos_sys_config_get_dash_server() == NULL) {
     LOG(LL_ERROR, ("dash.enable=true but dash.server is not set"));
     return false;
   }
 
   struct mg_rpc_channel_ws_out_cfg chcfg = {
-      .server_address = mg_mk_str(cfg->server),
+      .server_address = mg_mk_str(mgos_sys_config_get_dash_server()),
       .reconnect_interval_min = 5,
       .reconnect_interval_max = 60,
       .idle_close_timeout = 0,
   };
 #if MG_ENABLE_SSL
-  if (strncmp(cfg->server, "wss://", 6) == 0) {
-    chcfg.ssl_ca_file = mg_mk_str(cfg->ca_file);
+  if (strncmp(mgos_sys_config_get_dash_server(), "wss://", 6) == 0) {
+    chcfg.ssl_ca_file = mg_mk_str(mgos_sys_config_get_dash_ca_file());
   }
 #endif
 
@@ -73,13 +71,15 @@ bool mgos_dash_init(void) {
   }
   mg_rpc_add_channel(mgos_rpc_get_global(), chcfg.server_address, ch, true);
 
-  if (cfg->send_logs) {
+  if (mgos_sys_config_get_dash_send_logs()) {
     mgos_hook_register(MGOS_HOOK_DEBUG_WRITE, s_debug_write_hook, NULL);
   }
 
-  if (cfg->heartbeat_interval > 0) {
-    mgos_set_timer(cfg->heartbeat_interval * 1000, 1, timer_cb, NULL);
-    LOG(LL_INFO, ("Starting %d sec heartbeat timer", cfg->heartbeat_interval));
+  if (mgos_sys_config_get_dash_heartbeat_interval() > 0) {
+    mgos_set_timer(mgos_sys_config_get_dash_heartbeat_interval() * 1000, 1,
+                   timer_cb, NULL);
+    LOG(LL_INFO, ("Starting %d sec heartbeat timer",
+                  mgos_sys_config_get_dash_heartbeat_interval()));
   }
   return true;
 }
