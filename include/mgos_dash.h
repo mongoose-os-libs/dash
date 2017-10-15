@@ -3,6 +3,13 @@
  * All rights reserved
  */
 
+/*
+ * Device management dashboard API.
+ *
+ * See https://mongoose-os.com/docs/reference/dashboard.html for more
+ * information on device management dashboard.
+ */
+
 #ifndef CS_MOS_LIBS_DASH_SRC_MGOS_CRON_H_
 #define CS_MOS_LIBS_DASH_SRC_MGOS_CRON_H_
 
