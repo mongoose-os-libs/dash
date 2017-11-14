@@ -45,6 +45,14 @@ static void s_debug_write_hook(enum mgos_hook_type type,
   (void) userdata;
 }
 
+static void s_ota_hook(enum mgos_hook_type type,
+                       const struct mgos_hook_arg *arg, void *userdata) {
+  const struct mgos_ota_status *s = &arg->ota_status;
+  mgos_dash_callf("Dash.OTAState", "{state: %Q, msg: %Q}", s->state, s->msg);
+  (void) type;
+  (void) userdata;
+}
+
 bool mgos_dash_init(void) {
   if (!mgos_sys_config_get_dash_enable()) return true;
   if (mgos_sys_config_get_dash_server() == NULL) {
@@ -81,5 +89,19 @@ bool mgos_dash_init(void) {
     LOG(LL_INFO, ("Starting %d sec heartbeat timer",
                   mgos_sys_config_get_dash_heartbeat_interval()));
   }
+
+  mgos_hook_register(MGOS_HOOK_OTA_STATUS, s_ota_hook, NULL);
+
+  /* If we're running an uncommited firmware, report that. */
+  if (!mgos_upd_is_committed()) {
+    struct mg_rpc_call_opts opts = {
+        .dst = mg_mk_str(mgos_sys_config_get_dash_server()),
+        .key = mg_mk_str(mgos_sys_config_get_dash_token())};
+    /* Dont use mgos_dash_callf() in order to queue this request. */
+    mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.OTAState"), NULL, NULL,
+                 &opts, "{state: %Q, msg: %Q}", "boot",
+                 "Boot after OTA, waiting for commit");
+  }
+
   return true;
 }
