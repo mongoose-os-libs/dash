@@ -77,7 +77,7 @@ bool mgos_dash_init(void) {
     LOG(LL_ERROR, ("Cannot create dashboard connection"));
     return false;
   }
-  mg_rpc_add_channel(mgos_rpc_get_global(), chcfg.server_address, ch, true);
+  mg_rpc_add_channel(mgos_rpc_get_global(), chcfg.server_address, ch);
 
   if (mgos_sys_config_get_dash_send_logs()) {
     mgos_hook_register(MGOS_HOOK_DEBUG_WRITE, s_debug_write_hook, NULL);
