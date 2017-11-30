@@ -18,6 +18,7 @@ config_schema:
   - ["dash.send_logs", "b", true, {"title": "Send logs"}]
 
 libs:
+  - origin: https://github.com/mongoose-os-libs/ota-http-client
   - origin: https://github.com/mongoose-os-libs/rpc-common
 
 tags:
