@@ -53,7 +53,8 @@ static void s_debug_write_hook(enum mgos_hook_type type,
 static void s_ota_hook(enum mgos_hook_type type,
                        const struct mgos_hook_arg *arg, void *userdata) {
   const struct mgos_ota_status *s = &arg->ota_status;
-  mgos_dash_callf("Dash.OTAState", "{state: %Q, msg: %Q}", s->state, s->msg);
+  mgos_dash_callf("Dash.OTAState", "{state: %Q, msg: %Q}",
+                  mgos_ota_state_str(s->state), s->msg);
   (void) type;
   (void) userdata;
 }
