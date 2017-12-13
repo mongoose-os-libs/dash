@@ -13,7 +13,8 @@ static void mgos_dash_vcallf(const char *service, const char *json_fmt,
   struct mg_rpc_call_opts opts = {
       .dst = mg_mk_str(mgos_sys_config_get_dash_server()),
       .key = mg_mk_str(mgos_sys_config_get_dash_token()),
-      .noqueue = true};
+      .no_queue = true,
+  };
   mg_rpc_vcallf(mgos_rpc_get_global(), mg_mk_str(service), NULL, NULL, &opts,
                 json_fmt, ap);
 }
