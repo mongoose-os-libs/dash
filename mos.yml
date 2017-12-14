@@ -16,10 +16,12 @@ config_schema:
   - ["dash.ca_file", "s", "ca.pem", {"title": "CA file"}]
   - ["dash.heartbeat_interval", "i", 10, {"title": "Heartbeat interval in secods. Set to 0 to disable"}]
   - ["dash.send_logs", "b", true, {"title": "Send logs"}]
+  - ["dash.send_stats", "b", true, {"title": "Send stats"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/ota-http-client
   - origin: https://github.com/mongoose-os-libs/rpc-common
+  - origin: https://github.com/mongoose-os-libs/shadow
 
 tags:
   - c

@@ -3,59 +3,109 @@
  * All rights reserved
  */
 
-#include <stdbool.h>
-
 #include "mgos.h"
 #include "mgos_rpc.h"
+#include "mgos_shadow.h"
 
-static void mgos_dash_vcallf(const char *service, const char *json_fmt,
-                             va_list ap) {
+static struct mg_rpc_call_opts mkopts(void) {
   struct mg_rpc_call_opts opts = {
       .dst = mg_mk_str(mgos_sys_config_get_dash_server()),
       .key = mg_mk_str(mgos_sys_config_get_dash_token()),
-      .no_queue = true,
   };
-  mg_rpc_vcallf(mgos_rpc_get_global(), mg_mk_str(service), NULL, NULL, &opts,
-                json_fmt, ap);
-}
-
-static void mgos_dash_callf(const char *service, const char *json_fmt, ...) {
-  va_list ap;
-  va_start(ap, json_fmt);
-  mgos_dash_vcallf(service, json_fmt, ap);
-  va_end(ap);
-}
-
-void mgos_dash_send_data(const char *json_fmt, ...) {
-  va_list ap;
-  va_start(ap, json_fmt);
-  mgos_dash_vcallf("Dash.Data", json_fmt, ap);
-  va_end(ap);
-}
-
-static void timer_cb(void *arg) {
-  mgos_dash_callf("Dash.Heartbeat", "%M",
-                  (json_printf_callback_t) mgos_print_sys_info);
-  (void) arg;
+  return opts;
 }
 
 static void s_debug_write_cb(int ev, void *ev_data, void *userdata) {
-  const struct mgos_debug_hook_arg *arg =
-      (const struct mgos_debug_hook_arg *) ev_data;
   static unsigned s_seq = 0;
-  mgos_dash_callf("Dash.Log", "{fd:%d, data: %.*Q, t: %.3lf, seq:%u}", arg->fd,
-                  (int) arg->len, arg->data, mg_time(), s_seq);
+  const struct mgos_debug_hook_arg *arg = ev_data;
+  struct mg_rpc_call_opts opts = mkopts();
+  opts.no_queue = true;
+  /* Do not specify callback - we're not expecting an answer to the logs. */
+  mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Log"), NULL, NULL, &opts,
+               "{fd:%d, data: %.*Q, t: %.3lf, seq:%u}", arg->fd, (int) arg->len,
+               arg->data, mg_time(), s_seq);
   s_seq++;
   (void) ev;
   (void) userdata;
 }
 
-static void s_ota_cb(int ev, void *ev_data, void *userdata) {
-  const struct mgos_ota_status *s = (const struct mgos_ota_status *) ev_data;
-  mgos_dash_callf("Dash.OTAState", "{state: %Q, msg: %Q}",
-                  mgos_ota_state_str(s->state), s->msg);
+static void upd_res_cb(struct mg_rpc *c, void *cb_arg,
+                       struct mg_rpc_frame_info *fi, struct mg_str result,
+                       int error_code, struct mg_str error_msg) {
+  if (error_code != 0) {
+    struct mgos_shadow_error ev_data = {.code = error_code,
+                                        .message = error_msg};
+    mgos_event_trigger(MGOS_SHADOW_UPDATE_REJECTED, &ev_data);
+  } else {
+    mgos_event_trigger(MGOS_SHADOW_UPDATE_ACCEPTED, NULL);
+  }
+  (void) c;
+  (void) cb_arg;
+  (void) fi;
+  (void) result;
+}
+
+static void shadow_update_cb(int ev, void *ev_data, void *userdata) {
+  struct mgos_shadow_update_data *data = ev_data;
+  char *fmt = NULL;
+  if (data->version == 0) {
+    mg_asprintf(&fmt, 0, "{state: %s}", data->json_fmt);
+  } else {
+    mg_asprintf(&fmt, 0, "{version: %llu, state: %s}", data->version,
+                data->json_fmt);
+  }
+  struct mg_rpc_call_opts opts = mkopts();
+  mg_rpc_vcallf(mgos_rpc_get_global(), mg_mk_str("Dash.Shadow.Update"),
+                upd_res_cb, NULL, &opts, fmt, data->ap);
+  free(fmt);
   (void) ev;
   (void) userdata;
+}
+
+static void get_res_cb(struct mg_rpc *c, void *cb_arg,
+                       struct mg_rpc_frame_info *fi, struct mg_str result,
+                       int error_code, struct mg_str error_msg) {
+  if (error_code != 0) {
+    struct mgos_shadow_error ev_data = {.code = error_code,
+                                        .message = error_msg};
+    mgos_event_trigger(MGOS_SHADOW_GET_REJECTED, &ev_data);
+  } else {
+    mgos_event_trigger(MGOS_SHADOW_GET_ACCEPTED, &result);
+  }
+  (void) c;
+  (void) cb_arg;
+  (void) fi;
+  (void) result;
+}
+
+static void shadow_get_cb(int ev, void *ev_data, void *userdata) {
+  struct mg_rpc_call_opts opts = mkopts();
+  mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Shadow.Get"), get_res_cb,
+               NULL, &opts, NULL);
+  (void) ev;
+  (void) ev_data;
+  (void) userdata;
+}
+
+static void shadow_delta_cb(struct mg_rpc_request_info *ri, void *cb_arg,
+                            struct mg_rpc_frame_info *fi, struct mg_str args) {
+  mgos_event_trigger(MGOS_SHADOW_UPDATE_DELTA, &args);
+  mg_rpc_send_responsef(ri, "%B", 1);
+  (void) ri;
+  (void) cb_arg;
+  (void) fi;
+}
+
+static void first_call_cb(struct mg_rpc *c, void *cb_arg,
+                          struct mg_rpc_frame_info *fi, struct mg_str result,
+                          int error_code, struct mg_str error_msg) {
+  mgos_event_trigger(MGOS_SHADOW_CONNECTED, NULL);
+  (void) c;
+  (void) cb_arg;
+  (void) fi;
+  (void) result;
+  (void) error_msg;
+  (void) error_code;
 }
 
 bool mgos_dash_init(void) {
@@ -88,24 +138,22 @@ bool mgos_dash_init(void) {
     mgos_event_add_handler(MGOS_EVENT_LOG, s_debug_write_cb, NULL);
   }
 
-  if (mgos_sys_config_get_dash_heartbeat_interval() > 0) {
-    mgos_set_timer(mgos_sys_config_get_dash_heartbeat_interval() * 1000, 1,
-                   timer_cb, NULL);
-    LOG(LL_INFO, ("Starting %d sec heartbeat timer",
-                  mgos_sys_config_get_dash_heartbeat_interval()));
-  }
+  /* Schedule the first RPC call. */
+  struct mg_rpc_call_opts opts = mkopts();
+  mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Heartbeat"),
+               first_call_cb, NULL, &opts, "%M",
+               (json_printf_callback_t) mgos_print_sys_info);
 
-  mgos_event_add_handler(MGOS_EVENT_OTA_STATUS, s_ota_cb, NULL);
-
-  /* If we're running an uncommited firmware, report that. */
-  if (!mgos_upd_is_committed()) {
-    struct mg_rpc_call_opts opts = {
-        .dst = mg_mk_str(mgos_sys_config_get_dash_server()),
-        .key = mg_mk_str(mgos_sys_config_get_dash_token())};
-    /* Dont use mgos_dash_callf() in order to queue this request. */
-    mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.OTAState"), NULL, NULL,
-                 &opts, "{state: %Q, msg: %Q}", "boot",
-                 "Boot after OTA, waiting for commit");
+  /* Dash shadow initialisation */
+  const char *shadow_impl = mgos_sys_config_get_device_shadow_impl();
+  if (shadow_impl != NULL && strcmp(shadow_impl, "dash") != 0) {
+    LOG(LL_ERROR,
+        ("device.shadow=%s, not initialising dash shadow", shadow_impl));
+  } else {
+    struct mg_rpc *r = mgos_rpc_get_global();
+    mg_rpc_add_handler(r, "Shadow.Delta", NULL, shadow_delta_cb, NULL);
+    mgos_event_add_handler(MGOS_SHADOW_GET, shadow_get_cb, NULL);
+    mgos_event_add_handler(MGOS_SHADOW_UPDATE, shadow_update_cb, NULL);
   }
 
   return true;
