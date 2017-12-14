@@ -39,24 +39,22 @@ static void timer_cb(void *arg) {
   (void) arg;
 }
 
-static void s_debug_write_hook(enum mgos_hook_type type,
-                               const struct mgos_hook_arg *arg,
-                               void *userdata) {
+static void s_debug_write_cb(int ev, void *ev_data, void *userdata) {
+  const struct mgos_debug_hook_arg *arg =
+      (const struct mgos_debug_hook_arg *) ev_data;
   static unsigned s_seq = 0;
-  mgos_dash_callf("Dash.Log", "{fd:%d, data: %.*Q, t: %.3lf, seq:%u}",
-                  arg->debug.fd, (int) arg->debug.len, arg->debug.data,
-                  mg_time(), s_seq);
+  mgos_dash_callf("Dash.Log", "{fd:%d, data: %.*Q, t: %.3lf, seq:%u}", arg->fd,
+                  (int) arg->len, arg->data, mg_time(), s_seq);
   s_seq++;
-  (void) type;
+  (void) ev;
   (void) userdata;
 }
 
-static void s_ota_hook(enum mgos_hook_type type,
-                       const struct mgos_hook_arg *arg, void *userdata) {
-  const struct mgos_ota_status *s = &arg->ota_status;
+static void s_ota_cb(int ev, void *ev_data, void *userdata) {
+  const struct mgos_ota_status *s = (const struct mgos_ota_status *) ev_data;
   mgos_dash_callf("Dash.OTAState", "{state: %Q, msg: %Q}",
                   mgos_ota_state_str(s->state), s->msg);
-  (void) type;
+  (void) ev;
   (void) userdata;
 }
 
@@ -87,7 +85,7 @@ bool mgos_dash_init(void) {
   mg_rpc_add_channel(mgos_rpc_get_global(), chcfg.server_address, ch);
 
   if (mgos_sys_config_get_dash_send_logs()) {
-    mgos_hook_register(MGOS_HOOK_DEBUG_WRITE, s_debug_write_hook, NULL);
+    mgos_event_add_handler(MGOS_EVENT_LOG, s_debug_write_cb, NULL);
   }
 
   if (mgos_sys_config_get_dash_heartbeat_interval() > 0) {
@@ -97,7 +95,7 @@ bool mgos_dash_init(void) {
                   mgos_sys_config_get_dash_heartbeat_interval()));
   }
 
-  mgos_hook_register(MGOS_HOOK_OTA_STATUS, s_ota_hook, NULL);
+  mgos_event_add_handler(MGOS_EVENT_OTA_STATUS, s_ota_cb, NULL);
 
   /* If we're running an uncommited firmware, report that. */
   if (!mgos_upd_is_committed()) {
