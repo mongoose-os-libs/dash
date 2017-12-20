@@ -96,9 +96,9 @@ static void shadow_delta_cb(struct mg_rpc_request_info *ri, void *cb_arg,
   (void) fi;
 }
 
-static void first_call_cb(struct mg_rpc *c, void *cb_arg,
-                          struct mg_rpc_frame_info *fi, struct mg_str result,
-                          int error_code, struct mg_str error_msg) {
+static void heartbeat_cb(struct mg_rpc *c, void *cb_arg,
+                         struct mg_rpc_frame_info *fi, struct mg_str result,
+                         int error_code, struct mg_str error_msg) {
   mgos_event_trigger(MGOS_SHADOW_CONNECTED, NULL);
   (void) c;
   (void) cb_arg;
@@ -106,6 +106,19 @@ static void first_call_cb(struct mg_rpc *c, void *cb_arg,
   (void) result;
   (void) error_msg;
   (void) error_code;
+}
+
+/* When we're connected to the server, send our info */
+static void rpc_ev_cb(int ev, void *ev_data, void *userdata) {
+  struct mg_str *dst = (struct mg_str *) ev_data;
+  if (ev == MGOS_RPC_EV_CHANNEL_OPEN &&
+      mg_vcmp(dst, mgos_sys_config_get_dash_server()) == 0) {
+    struct mg_rpc_call_opts opts = mkopts();
+    mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Heartbeat"),
+                 heartbeat_cb, NULL, &opts, "%M",
+                 (json_printf_callback_t) mgos_print_sys_info);
+  }
+  (void) userdata;
 }
 
 bool mgos_dash_init(void) {
@@ -138,11 +151,7 @@ bool mgos_dash_init(void) {
     mgos_event_add_handler(MGOS_EVENT_LOG, s_debug_write_cb, NULL);
   }
 
-  /* Schedule the first RPC call. */
-  struct mg_rpc_call_opts opts = mkopts();
-  mg_rpc_callf(mgos_rpc_get_global(), mg_mk_str("Dash.Heartbeat"),
-               first_call_cb, NULL, &opts, "%M",
-               (json_printf_callback_t) mgos_print_sys_info);
+  mgos_event_add_handler(MGOS_RPC_EV_CHANNEL_OPEN, rpc_ev_cb, NULL);
 
   /* Dash shadow initialisation */
   const char *shadow_impl = mgos_sys_config_get_device_shadow_impl();
