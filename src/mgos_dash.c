@@ -7,10 +7,13 @@
 #include "mgos_rpc.h"
 #include "mgos_shadow.h"
 
+static struct mbuf s_dash_src;
+
 static struct mg_rpc_call_opts mkopts(void) {
   struct mg_rpc_call_opts opts = {
       .dst = mg_mk_str(mgos_sys_config_get_dash_server()),
       .key = mg_mk_str(mgos_sys_config_get_dash_token()),
+      .src = mg_mk_str_n(s_dash_src.buf, s_dash_src.len),
   };
   return opts;
 }
@@ -123,10 +126,26 @@ static void rpc_ev_cb(int ev, void *ev_data, void *userdata) {
 
 bool mgos_dash_init(void) {
   if (!mgos_sys_config_get_dash_enable()) return true;
-  if (mgos_sys_config_get_dash_server() == NULL) {
-    LOG(LL_ERROR, ("dash.enable=true but dash.server is not set"));
+  const struct mg_str token = mg_mk_str(mgos_sys_config_get_dash_token());
+  if (mgos_sys_config_get_dash_server() == NULL || token.len == 0) {
+    LOG(LL_ERROR, ("dash.enable=true but dash.server and/or dash.token "
+                   "is not set"));
     return false;
   }
+
+  mbuf_init(&s_dash_src, 0);
+  /*
+   * Extract ID portion: it's the first part of the token, or, if the token does
+   * not have a dash in it, first 8 chars (for compat with existing accounts).
+   */
+  const char *dash = mg_strchr(token, '-');
+  mbuf_append(&s_dash_src, token.p,
+              (dash != NULL ? dash - token.p : MIN((int) token.len, 8)));
+  mbuf_append(&s_dash_src, "-", 1);
+  mbuf_append(&s_dash_src, mgos_sys_config_get_device_id(),
+              strlen(mgos_sys_config_get_device_id()));
+  mg_rpc_add_local_id(mgos_rpc_get_global(),
+                      mg_mk_str_n(s_dash_src.buf, s_dash_src.len));
 
   struct mg_rpc_channel_ws_out_cfg chcfg = {
       .server_address = mg_mk_str(mgos_sys_config_get_dash_server()),
@@ -164,6 +183,10 @@ bool mgos_dash_init(void) {
     mgos_event_add_handler(MGOS_SHADOW_GET, shadow_get_cb, NULL);
     mgos_event_add_handler(MGOS_SHADOW_UPDATE, shadow_update_cb, NULL);
   }
+
+  LOG(LL_INFO,
+      ("Dash init ok (server: %s, ID: %.*s)", mgos_sys_config_get_dash_server(),
+       (int) s_dash_src.len, s_dash_src.buf));
 
   return true;
 }
