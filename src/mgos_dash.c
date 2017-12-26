@@ -124,6 +124,17 @@ static void rpc_ev_cb(int ev, void *ev_data, void *userdata) {
   (void) userdata;
 }
 
+static void stats_timer_cb(void *arg) {
+  struct mg_rpc_call_opts opts = mkopts();
+  opts.no_queue = true;
+  mg_rpc_callf(
+      mgos_rpc_get_global(), mg_mk_str("Dash.Shadow.Update"), NULL, NULL, &opts,
+      "{state:{reported:{stats:{ram_total:%lu,ram_free:%lu,ram_lwm:%lu}}}}",
+      mgos_get_heap_size(), mgos_get_free_heap_size(),
+      mgos_get_min_free_heap_size());
+  (void) arg;
+}
+
 bool mgos_dash_init(void) {
   if (!mgos_sys_config_get_dash_enable()) return true;
   const struct mg_str token = mg_mk_str(mgos_sys_config_get_dash_token());
@@ -182,6 +193,12 @@ bool mgos_dash_init(void) {
     mg_rpc_add_handler(r, "Shadow.Delta", NULL, shadow_delta_cb, NULL);
     mgos_event_add_handler(MGOS_SHADOW_GET, shadow_get_cb, NULL);
     mgos_event_add_handler(MGOS_SHADOW_UPDATE, shadow_update_cb, NULL);
+    if (mgos_sys_config_get_dash_stats_interval() > 0) {
+      mgos_set_timer(mgos_sys_config_get_dash_stats_interval() * 1000,
+                     MGOS_TIMER_REPEAT, stats_timer_cb, NULL);
+      LOG(LL_INFO, ("Starting %d sec stats timer",
+                    mgos_sys_config_get_dash_stats_interval()));
+    }
   }
 
   LOG(LL_INFO,

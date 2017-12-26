@@ -12,11 +12,10 @@ config_schema:
   - ["dash", "o", {"title": "Device management dashboard settings"}]
   - ["dash.enable", "b", false, {"title": "Enable"}]
   - ["dash.token", "s", "", {"title": "Access token"}]
-  - ["dash.server", "s", "wss://mongoose-os.com/dashboard/rpc", {"title": "Server"}]
+  - ["dash.server", "s", "wss://dash.mongoose-os.com/api/v1/rpc", {"title": "Server address"}]
   - ["dash.ca_file", "s", "ca.pem", {"title": "CA file"}]
-  - ["dash.heartbeat_interval", "i", 10, {"title": "Heartbeat interval in secods. Set to 0 to disable"}]
   - ["dash.send_logs", "b", true, {"title": "Send logs"}]
-  - ["dash.send_stats", "b", true, {"title": "Send stats"}]
+  - ["dash.stats_interval", "i", 10, {"title": "Stats interval in seconds. Set to 0 to disable"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/ota-http-client
