@@ -184,10 +184,9 @@ bool mgos_dash_init(void) {
   mgos_event_add_handler(MGOS_RPC_EV_CHANNEL_OPEN, rpc_ev_cb, NULL);
 
   /* Dash shadow initialisation */
-  const char *shadow_impl = mgos_sys_config_get_device_shadow_impl();
-  if (shadow_impl != NULL && strcmp(shadow_impl, "dash") != 0) {
-    LOG(LL_ERROR,
-        ("device.shadow=%s, not initialising dash shadow", shadow_impl));
+  const char *impl = mgos_sys_config_get_shadow_lib();
+  if (impl != NULL && strcmp(impl, "dash") != 0) {
+    LOG(LL_INFO, ("shadow.lib=%s, not initialising dash shadow", impl));
   } else {
     struct mg_rpc *r = mgos_rpc_get_global();
     mg_rpc_add_handler(r, "Shadow.Delta", NULL, shadow_delta_cb, NULL);
