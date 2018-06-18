@@ -19,8 +19,10 @@ config_schema:
   - ["dash.ota_chunk_size", "i", 1024, {"title": "OTA download chunk size in bytes"}]
 
 libs:
+  - origin: https://github.com/mongoose-os-libs/core
   - origin: https://github.com/mongoose-os-libs/rpc-common
   - origin: https://github.com/mongoose-os-libs/shadow
+  - origin: https://github.com/mongoose-os-libs/wifi
 
 tags:
   - c
