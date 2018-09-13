@@ -26,6 +26,6 @@ libs:
 tags:
   - c
   - rpc
-  - docs:cloud:mDash device management
+  - docs:cloud:mDash dashboard
 
 manifest_version: 2017-09-29
