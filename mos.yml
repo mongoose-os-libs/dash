@@ -26,5 +26,6 @@ libs:
 tags:
   - c
   - rpc
+  - docs:cloud:mDash device management
 
 manifest_version: 2017-09-29
