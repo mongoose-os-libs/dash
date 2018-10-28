@@ -9,14 +9,12 @@ includes:
   - include
 
 config_schema:
-  - ["dash", "o", {"title": "Device management dashboard settings"}]
   - ["dash.enable", "b", false, {"title": "Enable"}]
   - ["dash.token", "s", "", {"title": "Access token"}]
   - ["dash.server", "s", "wss://dash.mongoose-os.com/api/v2/rpc", {"title": "Server address"}]
   - ["dash.ca_file", "s", "ca.pem", {"title": "CA file"}]
-  - ["dash.send_logs", "b", true, {"title": "Send logs"}]
+  - ["dash.send_logs", "b", false, {"title": "Send logs"}]
   - ["dash.stats_interval", "i", 10, {"title": "Stats interval in seconds. Set to 0 to disable"}]
-  - ["dash.ota_chunk_size", "i", 1024, {"title": "OTA download chunk size in bytes"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/core
