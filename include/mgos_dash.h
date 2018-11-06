@@ -28,6 +28,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Returns true if mDash connection is up, false otherwise. */
+bool mgos_dash_is_connected(void);
+
 /*
  * Send an notification RPC to the dashboard that does not require an answer.
  * Example - report statistical data:
