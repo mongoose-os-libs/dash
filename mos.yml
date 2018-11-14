@@ -14,7 +14,6 @@ config_schema:
   - ["dash.server", "s", "wss://dash.mongoose-os.com/api/v2/rpc", {"title": "Server address"}]
   - ["dash.ca_file", "s", "ca.pem", {"title": "CA file"}]
   - ["dash.send_logs", "b", false, {"title": "Send logs"}]
-  - ["dash.stats_interval", "i", 10, {"title": "Stats interval in seconds. Set to 0 to disable"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/core
