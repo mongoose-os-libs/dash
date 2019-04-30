@@ -18,9 +18,9 @@ config_schema:
   - ["dash.send_logs", "b", false, {"title": "Send logs"}]
 
 libs:
-  - origin: https://github.com/cesanta/mongoose-os-libs/core
-  - origin: https://github.com/cesanta/mongoose-os-libs/rpc-ws
-  - origin: https://github.com/cesanta/mongoose-os-libs/shadow
+  - origin: https://github.com/mongoose-os-libs/core
+  - origin: https://github.com/mongoose-os-libs/rpc-ws
+  - origin: https://github.com/mongoose-os-libs/shadow
 
 tags:
   - c
