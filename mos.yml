@@ -11,7 +11,7 @@ includes:
 config_schema:
   - ["dash.enable", "b", false, {"title": "Enable"}]
   - ["dash.token", "s", "", {"title": "Access token"}]
-  - ["dash.server", "s", "wss://dash.mongoose-os.com/api/v2/rpc", {"title": "Server address"}]
+  - ["dash.server", "s", "wss://mdash.net/api/v2/rpc", {"title": "Server address"}]
   - ["dash.ssl_cert", "s", "", {title: "Client certificate to present to the server"}]
   - ["dash.ssl_key", "s", "", {title: "Private key corresponding to the certificate"}]
   - ["dash.ssl_ca_cert", "s", "ca.pem", {"title": "Verify server certificate using this CA bundle"}]
