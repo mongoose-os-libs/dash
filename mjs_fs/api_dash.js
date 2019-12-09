@@ -16,7 +16,6 @@ let Dash = {
   // ```
   notify: function(name, data) {
     if (typeof (data) != 'string') data = JSON.stringify(data);
-    let data = {cb: cb, ud: ud};
     this._no(name, data);
   },
 
