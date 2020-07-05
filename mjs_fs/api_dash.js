@@ -15,7 +15,7 @@ let Dash = {
   // Dash.notify('Data', {temperature: 12.34});
   // ```
   notify: function(name, data) {
-    if (typeof (data) != 'string') data = JSON.stringify(data);
+    if (typeof (data) !== 'string') data = JSON.stringify(data);
     this._no(name, data);
   },
 
